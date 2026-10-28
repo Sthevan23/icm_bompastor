@@ -1,0 +1,9 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # API PHP → api/index.php?route=...
+  RewriteRule ^api/health$ api/index.php?route=health [L,QSA]
+  RewriteRule ^api/scales/([a-f0-9]{16})/slot$ api/index.php?route=scales/$1/slot [L,QSA]
+  RewriteRule ^api/scales/([a-f0-9]{16})$ api/index.php?route=scales/$1 [L,QSA]
+  RewriteRule ^api/scales$ api/index.php?route=scales [L,QSA]
+</IfModule>

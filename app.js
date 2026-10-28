@@ -1,6 +1,15 @@
 (function () {
   const STORAGE_KEY = "icm-oracao-v1";
 
+  function apiBase() {
+    const base = document.documentElement.dataset.apiBase || "";
+    return base.replace(/\/$/, "");
+  }
+
+  function apiUrl(path) {
+    return `${apiBase()}${path}`;
+  }
+
   function emptyList() {
     const list = {};
     for (let i = 0; i < 96; i += 1) {
@@ -39,7 +48,7 @@
   async function hasApi() {
     if (apiOn !== null) return apiOn;
     try {
-      const response = await fetch("/api/health", { cache: "no-store" });
+      const response = await fetch(apiUrl("/api/health"), { cache: "no-store" });
       apiOn = response.ok;
     } catch {
       apiOn = false;
@@ -101,7 +110,7 @@
     };
 
     if (await hasApi()) {
-      const response = await fetch("/api/scales", {
+      const response = await fetch(apiUrl("/api/scales"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -125,7 +134,7 @@
 
   async function getScale(id) {
     if (await hasApi()) {
-      const response = await fetch(`/api/scales/${encodeURIComponent(id)}`, {
+      const response = await fetch(apiUrl(`/api/scales/${encodeURIComponent(id)}`), {
         cache: "no-store",
       });
       if (response.status === 404) return null;
@@ -139,7 +148,7 @@
     if (await hasApi()) {
       const headers = { "Content-Type": "application/json" };
       if (name == null) headers["X-Owner-Token"] = tokenFor(id);
-      const response = await fetch(`/api/scales/${encodeURIComponent(id)}/slot`, {
+      const response = await fetch(apiUrl(`/api/scales/${encodeURIComponent(id)}/slot`), {
         method: "POST",
         headers,
         body: JSON.stringify({ interval, name }),
@@ -163,7 +172,7 @@
 
   async function deleteScale(id) {
     if (await hasApi()) {
-      const response = await fetch(`/api/scales/${encodeURIComponent(id)}`, {
+      const response = await fetch(apiUrl(`/api/scales/${encodeURIComponent(id)}`), {
         method: "DELETE",
         headers: { "X-Owner-Token": tokenFor(id) },
       });
@@ -211,6 +220,7 @@
   }
 
   window.ICM = {
+    apiUrl,
     emptyList,
     hasApi,
     listScales,

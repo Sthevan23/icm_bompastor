@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-api-base="">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -33,8 +33,6 @@
         <h1 class="hero-title">Oração Ininterrupta</h1>
         <p class="hero-sub">Organize e compartilhe a escala de oração da sua igreja</p>
       </header>
-
-      <div id="shareInfo" class="glass share-info delay-1" hidden></div>
 
       <form id="form" class="glass delay-1" hidden>
         <div class="field">
@@ -75,7 +73,6 @@
       const form = document.getElementById("form");
       const newBtn = document.getElementById("newBtn");
       const lists = document.getElementById("lists");
-      const shareInfo = document.getElementById("shareInfo");
 
       document.getElementById("date0").value = ICM.localToday(0);
       document.getElementById("date1").value = ICM.localToday(6);
@@ -177,29 +174,7 @@
         return div.innerHTML;
       }
 
-      async function showShare() {
-        shareInfo.hidden = false;
-        if (!(await ICM.hasApi())) {
-          shareInfo.innerHTML =
-            '<i class="bi bi-info-circle"></i><div>Para inscrições pelo celular, execute <strong>iniciar.bat</strong> neste computador e use o endereço exibido na tela (mesma rede Wi‑Fi).</div>';
-          return;
-        }
-        try {
-          const response = await fetch("/api/health", { cache: "no-store" });
-          const data = await response.json();
-          const lan = (data.urls || []).find((item) => !item.includes("localhost"));
-          const url = lan || (data.urls || [])[0] || window.location.origin;
-          shareInfo.innerHTML =
-            '<i class="bi bi-phone"></i><div>' +
-            (lan ? "No celular, mesma Wi‑Fi, abra:" : "Abra no navegador:") +
-            `<strong>${url}</strong></div>`;
-        } catch {
-          shareInfo.hidden = true;
-        }
-      }
-
       renderList();
-      showShare();
     </script>
   </body>
 </html>
