@@ -430,9 +430,11 @@ ${window.location.href}`;
           render();
           enableActions();
         } catch {
+          document.getElementById("slotList").innerHTML =
+            '<div class="loading-row">Não foi possível carregar. Tente de novo ou crie uma nova escala no início.</div>';
           Swal.fire({
             title: "Erro",
-            text: "Não foi possível carregar a escala.",
+            text: "Não foi possível carregar a escala. Crie de novo em icmbompastor.seuproximosite.com.br e compartilhe o link gerado.",
             icon: "error",
             ...buttons(),
           });

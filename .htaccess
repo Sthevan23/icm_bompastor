@@ -1,5 +1,6 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  RewriteBase /
 
   # API PHP → api/index.php?route=...
   RewriteRule ^api/health$ api/index.php?route=health [L,QSA]

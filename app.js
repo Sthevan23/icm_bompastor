@@ -7,7 +7,12 @@
   }
 
   function apiUrl(path) {
-    return `${apiBase()}${path}`;
+    const base = apiBase();
+    if (path.startsWith("/api/")) {
+      const route = path.slice("/api/".length);
+      return `${base}/api/index.php?route=${encodeURIComponent(route)}`;
+    }
+    return `${base}${path}`;
   }
 
   function emptyList() {
