@@ -20,6 +20,7 @@ Resumo:
 2. Copiar `api/config.example.php` → `api/config.php` e preencher o MySQL.
 3. Enviar os arquivos para `public_html`.
 4. Testar `https://seudominio.com/api/health`.
+5. Admin: `/admin/` (usuário `01`, senha `icm2026` — configurável em `api/config.php`).
 
 ## Arquivos
 

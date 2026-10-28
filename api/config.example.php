@@ -9,4 +9,8 @@ return [
     'db_user' => 'SEU_USUARIO',
     'db_pass' => 'SUA_SENHA',
     'db_charset' => 'utf8mb4',
+
+    // Painel admin (/admin/)
+    'admin_user' => '01',
+    'admin_pass' => 'icm2026',
 ];
