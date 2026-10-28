@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#c8102e" />
+    <title>Escala · Oração Ininterrupta</title>
+    <link rel="icon" href="logo.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="bg" aria-hidden="true">
+      <div class="orb orb-a"></div>
+      <div class="orb orb-b"></div>
+      <div class="orb orb-c"></div>
+    </div>
+
+    <div class="shell">
+      <header class="topbar">
+        <button class="icon-btn" type="button" id="backBtn" aria-label="Voltar">
+          <i class="bi bi-arrow-left"></i>
+        </button>
+        <h1>Escala de oração</h1>
+        <span></span>
+      </header>
+
+      <div class="logo-inline">
+        <img class="brand" src="logo.svg" alt="Igreja Cristã Maranata" />
+      </div>
+
+      <section class="glass delay-1" id="info">
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="k">Igreja</span>
+            <span class="v" id="igreja">—</span>
+          </div>
+          <div class="info-item">
+            <span class="k">Motivo</span>
+            <span class="v" id="motivo">—</span>
+          </div>
+          <div class="info-item">
+            <span class="k">Período</span>
+            <span class="v" id="periodo">—</span>
+          </div>
+        </div>
+        <div class="progress-block">
+          <div class="progress-head">
+            <span>Horários preenchidos</span>
+            <span id="pctLabel">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <p class="meta-line" id="preenchidos"></p>
+          <p class="meta-line" id="atualizado"></p>
+        </div>
+      </section>
+
+      <p class="hint">
+        <i class="bi bi-info-circle"></i>
+        Cada horário vale para todos os dias do período. Toque em <strong>Registrar</strong> e informe o nome.
+      </p>
+
+      <div class="actions delay-2">
+        <div class="action-item">
+          <button id="copyButton" type="button" disabled aria-label="Copiar link">
+            <i class="bi bi-whatsapp"></i>
+          </button>
+          <span id="optLabel-1">Compartilhar</span>
+        </div>
+        <div class="action-item">
+          <button id="downloadButton" type="button" disabled aria-label="Baixar PDF">
+            <i class="bi bi-file-earmark-pdf"></i>
+          </button>
+          <span id="optLabel-2">PDF</span>
+        </div>
+        <div class="action-item">
+          <button id="dell" class="danger" type="button" disabled aria-label="Excluir escala">
+            <i class="bi bi-trash3"></i>
+          </button>
+          <span id="optLabel-3" class="danger-label">Excluir</span>
+        </div>
+      </div>
+
+      <div class="slot-list" id="slotList">
+        <div class="loading-row">Buscando a lista...</div>
+      </div>
+    </div>
+
+    <div id="pdfSheet" class="pdf-sheet" aria-hidden="true">
+      <img src="logo.svg" alt="Igreja Cristã Maranata" />
+      <h2>Escala da Oração Ininterrupta</h2>
+      <p class="pdf-meta" id="pdfMeta"></p>
+      <div class="pdf-cols">
+        <table>
+          <thead>
+            <tr>
+              <th>Horário</th>
+              <th>Nome</th>
+            </tr>
+          </thead>
+          <tbody id="pdfLeft"></tbody>
+        </table>
+        <table>
+          <thead>
+            <tr>
+              <th>Horário</th>
+              <th>Nome</th>
+            </tr>
+          </thead>
+          <tbody id="pdfRight"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+      const id = window.location.hash.slice(1);
+      let state = null;
+      let owner = false;
+
+      document.getElementById("backBtn").addEventListener("click", () => {
+        window.location.href = "index.html";
+      });
+
+      function buttons() {
+        return { customClass: ICM.swalButtons() };
+      }
+
+      function openLoading(message) {
+        Swal.fire({
+          title: message,
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+      }
+
+      function render() {
+        document.getElementById("igreja").textContent = state.igreja;
+        document.getElementById("motivo").textContent = state.motivo;
+        document.getElementById("periodo").textContent =
+          `${ICM.brDate(state.date0)} – ${ICM.brDate(state.date1)}`;
+
+        const count = ICM.stats(state.currentList);
+        const pct = count.total ? (count.filled / count.total) * 100 : 0;
+        document.getElementById("pctLabel").textContent = `${count.percentage}%`;
+        document.getElementById("progressFill").style.width = `${pct}%`;
+        document.getElementById("preenchidos").innerHTML =
+          `<i class="bi bi-check2-circle"></i> ${count.filled} de ${count.total} horários`;
+        document.getElementById("atualizado").innerHTML =
+          `<i class="bi bi-clock-history"></i> Último registro: ${ICM.formatDate(state.timestamp)}`;
+
+        const list = document.getElementById("slotList");
+        list.replaceChildren();
+
+        let i = 0;
+        for (const interval of Object.keys(state.currentList)) {
+          const row = document.createElement("div");
+          row.className = "slot-row";
+          if (i < 12) row.style.animationDelay = `${i * 0.04}s`;
+          i += 1;
+
+          const time = document.createElement("div");
+          time.className = "slot-time";
+          time.innerHTML = `<i class="bi bi-clock"></i> ${interval}`;
+
+          const whoWrap = document.createElement("div");
+          const name = state.currentList[interval];
+
+          if (name && owner) {
+            row.classList.add("filled");
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "removeLink";
+            button.textContent = name;
+            button.title = "Toque para remover";
+            button.addEventListener("click", () => removeRegister(interval, name));
+            whoWrap.append(button);
+          } else if (name) {
+            row.classList.add("filled");
+            const span = document.createElement("span");
+            span.className = "slot-name";
+            span.textContent = name;
+            whoWrap.append(span);
+          } else {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "registerLink";
+            button.textContent = "Registrar";
+            button.addEventListener("click", () => register(interval));
+            whoWrap.append(button);
+          }
+
+          row.append(time, whoWrap);
+          list.append(row);
+        }
+      }
+
+      function enableActions() {
+        document.getElementById("copyButton").disabled = false;
+        document.getElementById("downloadButton").disabled = !owner;
+        document.getElementById("dell").disabled = !owner;
+        document.getElementById("optLabel-1").classList.add("on");
+        if (owner) {
+          document.getElementById("optLabel-2").classList.add("on");
+          document.getElementById("optLabel-3").classList.add("on");
+        }
+      }
+
+      async function register(interval) {
+        const result = await Swal.fire({
+          title: interval,
+          text: "Informe seu nome para este horário",
+          input: "text",
+          inputAttributes: { placeholder: "Seu nome", maxlength: "32" },
+          showCancelButton: true,
+          reverseButtons: true,
+          cancelButtonText: "Cancelar",
+          confirmButtonText: "Confirmar",
+          customClass: ICM.swalButtons(),
+          inputValidator: (value) => {
+            if (value.trim() === "") return "O nome não pode ser vazio";
+            if (value.trim().length > 32) return "Máximo de 32 caracteres";
+            return undefined;
+          },
+        });
+        if (!result.value) return;
+        await registerCb(result.value.trim(), interval);
+      }
+
+      async function registerCb(name, interval) {
+        openLoading("Aguarde...");
+        const result = await ICM.setSlot(id, interval, name);
+        Swal.close();
+
+        if (result.data && result.data.record) state = result.data.record;
+        else if (result.data && result.data.currentList) state = result.data;
+
+        if (!result.ok) {
+          const text =
+            result.status === 409
+              ? `O horário ${interval} já foi preenchido.`
+              : "Não foi possível concluir. Tente novamente.";
+          await Swal.fire({
+            title: "Horário indisponível",
+            text,
+            icon: "warning",
+            ...buttons(),
+          });
+        } else {
+          await Swal.fire({
+            title: "Registrado!",
+            text: "Sua participação foi salva com sucesso.",
+            icon: "success",
+            timer: 1800,
+            showConfirmButton: false,
+          });
+          if (owner) ICM.remember(state);
+        }
+        if (state) render();
+      }
+
+      async function removeRegister(interval, name) {
+        const result = await Swal.fire({
+          title: "Remover inscrição?",
+          html: `<strong>${name}</strong><br><small>${interval}</small>`,
+          icon: "question",
+          showCancelButton: true,
+          reverseButtons: true,
+          confirmButtonText: "Sim, remover",
+          cancelButtonText: "Cancelar",
+          customClass: ICM.swalButtons(),
+        });
+        if (!result.isConfirmed) return;
+
+        openLoading("Aguarde...");
+        const response = await ICM.setSlot(id, interval, null);
+        Swal.close();
+        if (response.data && response.data.record) state = response.data.record;
+        else if (response.data && response.data.currentList) state = response.data;
+
+        if (!response.ok) {
+          await Swal.fire({
+            title: "Erro",
+            text: "Não foi possível remover.",
+            icon: "warning",
+            ...buttons(),
+          });
+        }
+        if (state) {
+          ICM.remember(state);
+          render();
+        }
+      }
+
+      function messageText() {
+        return `📜 *ESCALA DA ORAÇÃO ININTERRUPTA*
+
+_Igreja: ${state.igreja}_
+_Motivo: ${state.motivo}_
+_Período: ${ICM.brDate(state.date0)} – ${ICM.brDate(state.date1)}_
+
+Para participar, acesse:
+${window.location.href}`;
+      }
+
+      document.getElementById("copyButton").addEventListener("click", async () => {
+        const text = messageText();
+        try {
+          await navigator.clipboard.writeText(text);
+          Swal.fire({
+            title: "Copiado!",
+            text: "Cole no WhatsApp e envie para a igreja.",
+            icon: "success",
+            timer: 1600,
+            showConfirmButton: false,
+          });
+        } catch {
+          Swal.fire({
+            title: "Copie a mensagem",
+            input: "textarea",
+            inputValue: text,
+            confirmButtonText: "Fechar",
+            customClass: ICM.swalButtons(),
+          });
+        }
+      });
+
+      function fillPdfColumn(target, rows) {
+        target.replaceChildren();
+        for (const [interval, name] of rows) {
+          const row = document.createElement("tr");
+          const time = document.createElement("td");
+          time.textContent = interval;
+          const who = document.createElement("td");
+          who.textContent = name || "";
+          row.append(time, who);
+          target.append(row);
+        }
+      }
+
+      document.getElementById("downloadButton").addEventListener("click", async () => {
+        if (!owner || !state || typeof html2pdf === "undefined") return;
+        const entries = Object.entries(state.currentList);
+        fillPdfColumn(document.getElementById("pdfLeft"), entries.slice(0, 48));
+        fillPdfColumn(document.getElementById("pdfRight"), entries.slice(48));
+        document.getElementById("pdfMeta").textContent =
+          `Igreja: ${state.igreja}\nMotivo: ${state.motivo}\nPeríodo: ${ICM.brDate(state.date0)} – ${ICM.brDate(state.date1)}`;
+
+        const sheet = document.getElementById("pdfSheet");
+        openLoading("Gerando PDF...");
+        try {
+          await html2pdf()
+            .set({
+              margin: [8, 8, 8, 8],
+              filename: "escala-oracao-ininterrupta.pdf",
+              image: { type: "jpeg", quality: 0.98 },
+              html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
+              jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+              pagebreak: { mode: ["css", "legacy"] },
+            })
+            .from(sheet)
+            .save();
+        } catch {
+          await Swal.fire({
+            title: "Erro no PDF",
+            text: "Não foi possível gerar o arquivo.",
+            icon: "warning",
+            ...buttons(),
+          });
+        } finally {
+          Swal.close();
+        }
+      });
+
+      document.getElementById("dell").addEventListener("click", async () => {
+        const result = await Swal.fire({
+          title: "Excluir escala?",
+          text: "Todos os horários e nomes serão apagados.",
+          icon: "warning",
+          showCancelButton: true,
+          reverseButtons: true,
+          confirmButtonText: "Sim, excluir",
+          cancelButtonText: "Cancelar",
+          customClass: ICM.swalButtons(),
+        });
+        if (!result.isConfirmed) return;
+        openLoading("Aguarde...");
+        try {
+          await ICM.deleteScale(id);
+          Swal.close();
+          window.location.href = "index.html";
+        } catch {
+          Swal.fire({
+            title: "Erro",
+            text: "Não foi possível excluir.",
+            icon: "error",
+            ...buttons(),
+          });
+        }
+      });
+
+      async function main() {
+        if (!id) {
+          window.location.href = "index.html";
+          return;
+        }
+        try {
+          const data = await ICM.getScale(id);
+          if (!data) {
+            ICM.forget(id);
+            await Swal.fire({
+              title: "Escala não encontrada",
+              text: "O link pode estar incorreto ou a escala foi excluída.",
+              icon: "warning",
+              ...buttons(),
+            });
+            window.location.href = "index.html";
+            return;
+          }
+          state = data;
+          owner = ICM.isOwner(id);
+          render();
+          enableActions();
+        } catch {
+          Swal.fire({
+            title: "Erro",
+            text: "Não foi possível carregar a escala.",
+            icon: "error",
+            ...buttons(),
+          });
+        }
+      }
+
+      main();
+    </script>
+  </body>
+</html>
