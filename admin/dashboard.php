@@ -22,9 +22,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     exit;
 }
 
-$rows = $pdo->query(
-    'SELECT id, igreja, motivo, date0, date1, atualizado_em FROM escalas ORDER BY atualizado_em DESC'
-)->fetchAll();
+try {
+    $rows = $pdo->query(
+        'SELECT id, igreja, motivo, date0, date1, atualizado_em FROM escalas ORDER BY atualizado_em DESC'
+    )->fetchAll();
+} catch (PDOException) {
+    admin_fail_page(
+        'Tabela não encontrada',
+        'Importe database.sql no phpMyAdmin (tabela escalas).'
+    );
+}
 
 $flash = admin_flash_get();
 ?>

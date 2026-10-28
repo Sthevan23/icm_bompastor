@@ -1,34 +1,19 @@
 <?php
 declare(strict_types=1);
 
-require __DIR__ . '/helpers.php';
-
-$configPath = __DIR__ . '/config.php';
-if (!is_file($configPath)) {
-    json_response(503, [
-        'error' => 'config',
-        'message' => 'Copie api/config.example.php para api/config.php e configure o MySQL.',
-    ]);
-}
-
-/** @var array<string, string> $config */
-$config = require $configPath;
-
-$dsn = sprintf(
-    'mysql:host=%s;dbname=%s;charset=%s',
-    $config['db_host'],
-    $config['db_name'],
-    $config['db_charset'] ?? 'utf8mb4'
-);
+require_once __DIR__ . '/connect.php';
 
 try {
-    $pdo = new PDO($dsn, $config['db_user'], $config['db_pass'], [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
-} catch (PDOException $e) {
+    [$config, $pdo] = api_connect();
+} catch (RuntimeException $e) {
+    if ($e->getMessage() === 'missing_config') {
+        json_response(503, [
+            'error' => 'config',
+            'message' => 'Crie api/config.php ou envie config.hostinger.php pelo Git.',
+        ]);
+    }
     json_response(503, [
         'error' => 'database',
-        'message' => 'Não foi possível conectar ao MySQL. Verifique api/config.php.',
+        'message' => 'Não foi possível conectar ao MySQL. Confira api/config.hostinger.php e importe database.sql.',
     ]);
 }

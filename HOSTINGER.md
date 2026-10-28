@@ -11,7 +11,7 @@ Os horários e nomes dos irmãos ficam no **MySQL**. O site continua sendo HTML/
 ## 2. Configurar a API
 
 1. No computador, copie `api/config.example.php` para `api/config.php`.
-2. Edite `api/config.php` com os dados do passo 1:
+2. O Git já envia `api/config.hostinger.php` com o MySQL da Hostinger. Se preferir, copie `api/config.example.php` → `api/config.php` e edite:
 
 ```php
 'db_host' => 'localhost',      // ou o host que a Hostinger mostrar

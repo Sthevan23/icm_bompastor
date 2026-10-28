@@ -4,33 +4,50 @@ declare(strict_types=1);
 session_start();
 
 require __DIR__ . '/../api/helpers.php';
+require __DIR__ . '/../api/connect.php';
 
-$configPath = __DIR__ . '/../api/config.php';
-if (!is_file($configPath)) {
+function admin_fail_page(string $title, string $message): void
+{
     http_response_code(503);
-    echo 'Configure api/config.php antes de usar o painel.';
+    ?>
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin · Configuração</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <div class="wrap login-box">
+      <div class="card">
+        <h1 style="margin: 0 0 0.5rem; color: #9b0b22"><?= admin_h($title) ?></h1>
+        <p class="muted"><?= admin_h($message) ?></p>
+        <p class="muted" style="margin-top: 1rem">
+          <a href="../index.html">Voltar ao site</a>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>
+    <?php
     exit;
 }
 
-/** @var array<string, string> $config */
-$config = require $configPath;
-
-$dsn = sprintf(
-    'mysql:host=%s;dbname=%s;charset=%s',
-    $config['db_host'],
-    $config['db_name'],
-    $config['db_charset'] ?? 'utf8mb4'
-);
-
 try {
-    $pdo = new PDO($dsn, $config['db_user'], $config['db_pass'], [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
-} catch (PDOException) {
-    http_response_code(503);
-    echo 'Erro ao conectar no MySQL. Verifique api/config.php.';
-    exit;
+    [$config, $pdo] = api_connect();
+} catch (RuntimeException $e) {
+    if ($e->getMessage() === 'missing_config') {
+        admin_fail_page(
+            'Configuração ausente',
+            'Envie api/config.hostinger.php ou api/config.php para o servidor.'
+        );
+    }
+    admin_fail_page(
+        'Erro no banco de dados',
+        'Verifique usuário e senha MySQL. No phpMyAdmin, importe o arquivo database.sql para criar a tabela escalas.'
+    );
 }
 
 function admin_csrf_token(): string
