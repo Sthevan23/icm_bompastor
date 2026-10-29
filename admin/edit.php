@@ -22,6 +22,22 @@ if (!$row) {
 
 $keys = valid_slot_keys();
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset_slots') {
+    if (!admin_csrf_ok($_POST['csrf'] ?? null)) {
+        admin_flash_set('err', 'Sessão expirada. Tente novamente.');
+        header('Location: edit.php?id=' . urlencode($id));
+        exit;
+    }
+    $empty = json_encode(empty_slot_list(), JSON_UNESCAPED_UNICODE);
+    $upd = $pdo->prepare(
+        'UPDATE escalas SET current_list = :list, atualizado_em = UTC_TIMESTAMP() WHERE id = :id'
+    );
+    $upd->execute([':list' => $empty, ':id' => $id]);
+    admin_flash_set('ok', 'Todos os horários foram zerados (96 vazios).');
+    header('Location: edit.php?id=' . urlencode($id));
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save') {
     if (!admin_csrf_ok($_POST['csrf'] ?? null)) {
         admin_flash_set('err', 'Sessão expirada. Tente novamente.');
@@ -157,6 +173,16 @@ $flash = admin_flash_get();
         <div class="actions" style="margin-top: 1.25rem">
           <button class="btn" type="submit">Salvar alterações</button>
         </div>
+      </form>
+
+      <form method="post" class="card" style="margin-top: 1rem" onsubmit="return confirm('Zerar TODOS os 96 horários? Os nomes serão apagados.');">
+        <input type="hidden" name="action" value="reset_slots" />
+        <input type="hidden" name="id" value="<?= admin_h($id) ?>" />
+        <input type="hidden" name="csrf" value="<?= admin_h(admin_csrf_token()) ?>" />
+        <p class="muted" style="margin: 0 0 0.75rem">
+          Apaga todos os nomes e deixa a escala vazia de novo (igreja, datas e link continuam iguais).
+        </p>
+        <button class="btn danger" type="submit">Zerar todos os horários</button>
       </form>
     </div>
   </body>

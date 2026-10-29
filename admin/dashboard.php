@@ -6,6 +6,25 @@ admin_require_login();
 
 /** @var PDO $pdo */
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reset_slots') {
+    if (!admin_csrf_ok($_POST['csrf'] ?? null)) {
+        admin_flash_set('err', 'Sessão expirada. Tente novamente.');
+        header('Location: dashboard.php');
+        exit;
+    }
+    $id = (string) ($_POST['id'] ?? '');
+    if (preg_match('/^[a-f0-9]{16}$/', $id)) {
+        $empty = json_encode(empty_slot_list(), JSON_UNESCAPED_UNICODE);
+        $upd = $pdo->prepare(
+            'UPDATE escalas SET current_list = :list, atualizado_em = UTC_TIMESTAMP() WHERE id = :id'
+        );
+        $upd->execute([':list' => $empty, ':id' => $id]);
+        admin_flash_set('ok', 'Horários zerados. A escala continua; só os nomes foram apagados.');
+    }
+    header('Location: dashboard.php');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
     if (!admin_csrf_ok($_POST['csrf'] ?? null)) {
         admin_flash_set('err', 'Sessão expirada. Tente novamente.');
@@ -104,6 +123,12 @@ $flash = admin_flash_get();
                       <div class="row-actions">
                         <a class="btn" href="edit.php?id=<?= admin_h($row['id']) ?>">Editar</a>
                         <a class="btn ghost" href="../escala.html?id=<?= admin_h($row['id']) ?>" target="_blank" rel="noopener">Ver</a>
+                        <form method="post" onsubmit="return confirm('Zerar todos os horários desta escala? Os nomes serão apagados.');">
+                          <input type="hidden" name="csrf" value="<?= admin_h(admin_csrf_token()) ?>" />
+                          <input type="hidden" name="action" value="reset_slots" />
+                          <input type="hidden" name="id" value="<?= admin_h($row['id']) ?>" />
+                          <button class="btn ghost" type="submit">Zerar</button>
+                        </form>
                         <form method="post" onsubmit="return confirm('Excluir esta escala?');">
                           <input type="hidden" name="csrf" value="<?= admin_h(admin_csrf_token()) ?>" />
                           <input type="hidden" name="action" value="delete" />
