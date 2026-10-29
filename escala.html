@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-api-base="">
+<html lang="pt-BR" data-api-base="" data-server-only="true">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -120,9 +120,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=4"></script>
     <script>
-      const id = window.location.hash.slice(1);
+      const id = ICM.parseScaleId();
+      if (id) ICM.canonicalizeScaleUrl(id);
       let state = null;
       let owner = false;
 
@@ -308,10 +309,29 @@ _Motivo: ${state.motivo}_
 _Período: ${ICM.brDate(state.date0)} – ${ICM.brDate(state.date1)}_
 
 Para participar, acesse:
-${window.location.href}`;
+${ICM.scaleShareUrl(id)}`;
       }
 
       document.getElementById("copyButton").addEventListener("click", async () => {
+        if (!state) return;
+        openLoading("Verificando link...");
+        let ok = false;
+        try {
+          const check = await ICM.getScale(id);
+          ok = Boolean(check);
+        } catch {
+          ok = false;
+        }
+        Swal.close();
+        if (!ok) {
+          await Swal.fire({
+            title: "Ainda não está online",
+            text: "Esta escala não está salva no servidor. Crie de novo pelo botão Nova na página inicial (com internet) e compartilhe outra vez.",
+            icon: "warning",
+            ...buttons(),
+          });
+          return;
+        }
         const text = messageText();
         try {
           await navigator.clipboard.writeText(text);
@@ -418,8 +438,11 @@ ${window.location.href}`;
             ICM.forget(id);
             await Swal.fire({
               title: "Escala não encontrada",
-              text: "O link pode estar incorreto ou a escala foi excluída.",
+              html:
+                "Este link <strong>não está no servidor</strong> (comum com links antigos ou só do seu celular).<br><br>" +
+                "Peça quem administra para criar de novo em <strong>Nova escala</strong> no site e enviar o link do botão <strong>Compartilhar</strong>.",
               icon: "warning",
+              confirmButtonText: "Ir para o início",
               ...buttons(),
             });
             window.location.href = "index.html";
@@ -429,12 +452,15 @@ ${window.location.href}`;
           owner = ICM.isOwner(id);
           render();
           enableActions();
-        } catch {
+        } catch (err) {
           document.getElementById("slotList").innerHTML =
             '<div class="loading-row">Não foi possível carregar. Tente de novo ou crie uma nova escala no início.</div>';
           Swal.fire({
             title: "Erro",
-            text: "Não foi possível carregar a escala. Crie de novo em icmbompastor.seuproximosite.com.br e compartilhe o link gerado.",
+            text:
+              err && err.message === "api_off"
+                ? "Sem conexão com o servidor. Os horários são salvos online para todo o grupo — verifique a internet."
+                : "Não foi possível carregar a escala. Use o link Compartilhar de uma escala criada no site online.",
             icon: "error",
             ...buttons(),
           });

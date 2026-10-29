@@ -70,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save'
 }
 
 $record = row_to_record($row);
+$filledCount = count_filled_slots($record['currentList']);
 $flash = admin_flash_get();
 ?>
 <!DOCTYPE html>
@@ -87,7 +88,7 @@ $flash = admin_flash_get();
         <h1>Editar escala</h1>
         <div class="actions">
           <a class="btn ghost" href="dashboard.php">← Voltar</a>
-          <a class="btn ghost" href="../escala.html#<?= admin_h($id) ?>" target="_blank" rel="noopener">Ver no site</a>
+          <a class="btn ghost" href="../escala.html?id=<?= admin_h($id) ?>" target="_blank" rel="noopener">Ver no site</a>
         </div>
       </div>
 
@@ -120,7 +121,10 @@ $flash = admin_flash_get();
         </div>
 
         <p class="muted" style="margin: 0 0 0.5rem">
-          ID: <code><?= admin_h($id) ?></code> — deixe em branco para liberar o horário.
+          ID: <code><?= admin_h($id) ?></code> —
+          <strong><?= (int) $filledCount ?> / 96</strong> horários preenchidos no servidor.
+          Se estiver 0 mas o site mostra nomes, use
+          <a href="import.php">Importar do navegador</a> no aparelho onde cadastrou ontem.
         </p>
 
         <div class="slots">

@@ -33,10 +33,11 @@ Não é obrigatório subir `server.js`, `iniciar.bat` nem a pasta `data/` na Hos
 ## 4. Testar
 
 1. Abra `https://seudominio.com/api/health` — deve aparecer `{"ok":true}`.
-2. Abra `https://seudominio.com/` → **Nova** → crie uma escala.
-3. Abra o link da escala em outro celular e registre um horário.
-4. Atualize a página: o nome deve permanecer (veio do banco).
-5. Admin: `https://seudominio.com/admin/` — login **01** / **icm2026** (mude em `api/config.php`: `admin_user`, `admin_pass`).
+2. Abra `https://seudominio.com/` → **Nova** → crie uma escala (vai direto para o MySQL — qualquer celular do grupo vê).
+3. Na escala, **Compartilhar** → mande esse link no WhatsApp (não use link antigo só do seu aparelho).
+4. Abra o link da escala em outro celular e registre um horário.
+5. Atualize a página: o nome deve permanecer (veio do banco).
+6. Admin: `https://seudominio.com/admin/` — login **01** / **icm2026** (mude em `api/config.php`: `admin_user`, `admin_pass`).
 
 Envie a pasta **`admin/`** junto com os demais arquivos.
 

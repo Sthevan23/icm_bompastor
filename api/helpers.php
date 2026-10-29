@@ -29,6 +29,48 @@ function valid_slot_keys(): array
     return $keys;
 }
 
+function normalize_slot_list(array $input): array
+{
+    $merged = empty_slot_list();
+    foreach (valid_slot_keys() as $key) {
+        $val = $input[$key] ?? null;
+        if ($val !== null && $val !== '') {
+            $merged[$key] = mb_substr(trim((string) $val), 0, 32);
+        }
+    }
+    return $merged;
+}
+
+/** Prefer non-empty values from $local, keep server when local is empty. */
+function merge_slot_lists(array $server, array $local): array
+{
+    $server = normalize_slot_list($server);
+    $local = normalize_slot_list($local);
+    $out = empty_slot_list();
+    foreach (valid_slot_keys() as $key) {
+        $l = $local[$key] ?? null;
+        $s = $server[$key] ?? null;
+        if ($l !== null && $l !== '') {
+            $out[$key] = $l;
+        } elseif ($s !== null && $s !== '') {
+            $out[$key] = $s;
+        }
+    }
+    return $out;
+}
+
+function count_filled_slots(array $list): int
+{
+    $n = 0;
+    foreach (valid_slot_keys() as $key) {
+        $v = $list[$key] ?? null;
+        if ($v !== null && $v !== '') {
+            $n += 1;
+        }
+    }
+    return $n;
+}
+
 function json_response(int $status, array $payload): void
 {
     http_response_code($status);

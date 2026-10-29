@@ -6,6 +6,11 @@
     return base.replace(/\/$/, "");
   }
 
+  /** Produção: escalas só no servidor (grupo / vários celulares). */
+  function serverOnly() {
+    return document.documentElement.dataset.serverOnly === "true";
+  }
+
   function apiUrl(path) {
     const base = apiBase();
     if (path.startsWith("/api/")) {
@@ -13,6 +18,36 @@
       return `${base}/api/index.php?route=${encodeURIComponent(route)}`;
     }
     return `${base}${path}`;
+  }
+
+  const SCALE_ID_RE = /^[a-f0-9]{16}$/;
+
+  /** Link estável para WhatsApp (evita perder o #). */
+  function scaleHref(id) {
+    return `escala.html?id=${encodeURIComponent(id)}`;
+  }
+
+  function scaleShareUrl(id) {
+    return new URL(scaleHref(id), window.location.href).href;
+  }
+
+  function parseScaleId(locationLike) {
+    const loc = locationLike || window.location;
+    const params = new URLSearchParams(loc.search);
+    const fromQuery = params.get("id") || params.get("escala") || "";
+    if (SCALE_ID_RE.test(fromQuery)) return fromQuery;
+    const fromHash = loc.hash.slice(1);
+    if (SCALE_ID_RE.test(fromHash)) return fromHash;
+    return "";
+  }
+
+  function canonicalizeScaleUrl(id) {
+    if (!SCALE_ID_RE.test(id)) return;
+    const want = new URL(scaleHref(id), window.location.href);
+    if (window.location.pathname === want.pathname && window.location.search === want.search) {
+      return;
+    }
+    history.replaceState(null, "", want.pathname + want.search);
   }
 
   function emptyList() {
@@ -98,10 +133,91 @@
     return loadDB().tokens[id] || "";
   }
 
-  function listScales() {
+  function listScalesLocal() {
     return Object.values(loadDB().scales).sort((a, b) =>
       String(b.timestamp || "").localeCompare(String(a.timestamp || ""))
     );
+  }
+
+  async function listScalesRemote() {
+    const response = await fetch(apiUrl("/api/scales"), { cache: "no-store" });
+    if (response.status === 404) return [];
+    if (!response.ok) return null;
+    const data = await response.json();
+    return Array.isArray(data.scales) ? data.scales : [];
+  }
+
+  async function syncOneScale(id) {
+    if (!(await hasApi())) return false;
+    const db = loadDB();
+    const token = db.tokens[id];
+    const local = db.scales[id];
+    if (!token || !local) return false;
+
+    const check = await fetch(apiUrl(`/api/scales/${encodeURIComponent(id)}`), {
+      cache: "no-store",
+    });
+    if (check.status !== 404) return false;
+
+    const response = await fetch(apiUrl("/api/scales/sync"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        ownerToken: token,
+        record: {
+          igreja: local.igreja,
+          motivo: local.motivo,
+          date0: local.date0,
+          date1: local.date1,
+          timestamp: local.timestamp || new Date().toISOString(),
+          currentList: local.currentList || emptyList(),
+        },
+      }),
+    });
+    return response.ok;
+  }
+
+  async function syncLocalScales() {
+    if (!(await hasApi())) return 0;
+    const db = loadDB();
+    let synced = 0;
+
+    for (const id of Object.keys(db.scales)) {
+      if (await syncOneScale(id)) synced += 1;
+    }
+    return synced;
+  }
+
+  async function listScales() {
+    let synced = 0;
+    const online = await hasApi();
+
+    if (serverOnly() && !online) {
+      return { items: [], synced: 0, apiOff: true };
+    }
+
+    if (online) {
+      synced = await syncLocalScales();
+      const remote = await listScalesRemote();
+      if (remote !== null) {
+        for (const item of remote) {
+          remember(item);
+        }
+        return {
+          items: remote.sort((a, b) =>
+            String(b.timestamp || "").localeCompare(String(a.timestamp || ""))
+          ),
+          synced,
+          apiOff: false,
+        };
+      }
+    }
+
+    if (serverOnly()) {
+      return { items: [], synced, apiOff: !online };
+    }
+    return { items: listScalesLocal(), synced, apiOff: false };
   }
 
   async function createScale(data) {
@@ -114,7 +230,12 @@
       currentList: emptyList(),
     };
 
-    if (await hasApi()) {
+    const online = await hasApi();
+    if (serverOnly() && !online) {
+      throw new Error("api_off");
+    }
+
+    if (online) {
       const response = await fetch(apiUrl("/api/scales"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -138,19 +259,34 @@
   }
 
   async function getScale(id) {
-    if (await hasApi()) {
+    const online = await hasApi();
+    if (serverOnly() && !online) {
+      throw new Error("api_off");
+    }
+
+    if (online) {
+      await syncOneScale(id);
       const response = await fetch(apiUrl(`/api/scales/${encodeURIComponent(id)}`), {
         cache: "no-store",
       });
-      if (response.status === 404) return null;
+      if (response.status === 404) {
+        if (serverOnly()) return null;
+        return loadDB().scales[id] || null;
+      }
       if (!response.ok) throw new Error("get");
-      return response.json();
+      const record = await response.json();
+      remember(record);
+      return record;
     }
     return loadDB().scales[id] || null;
   }
 
   async function setSlot(id, interval, name) {
-    if (await hasApi()) {
+    const online = await hasApi();
+    if (serverOnly() && !online) {
+      return { ok: false, status: 503, data: null };
+    }
+    if (online) {
       const headers = { "Content-Type": "application/json" };
       if (name == null) headers["X-Owner-Token"] = tokenFor(id);
       const response = await fetch(apiUrl(`/api/scales/${encodeURIComponent(id)}/slot`), {
@@ -159,6 +295,9 @@
         body: JSON.stringify({ interval, name }),
       });
       const data = await response.json().catch(() => null);
+      if (response.ok && data && data.record) {
+        remember(data.record);
+      }
       return { ok: response.ok, status: response.status, data };
     }
 
@@ -176,7 +315,11 @@
   }
 
   async function deleteScale(id) {
-    if (await hasApi()) {
+    const online = await hasApi();
+    if (serverOnly() && !online) {
+      throw new Error("api_off");
+    }
+    if (online) {
       const response = await fetch(apiUrl(`/api/scales/${encodeURIComponent(id)}`), {
         method: "DELETE",
         headers: { "X-Owner-Token": tokenFor(id) },
@@ -226,9 +369,16 @@
 
   window.ICM = {
     apiUrl,
+    scaleHref,
+    scaleShareUrl,
+    parseScaleId,
+    canonicalizeScaleUrl,
     emptyList,
     hasApi,
+    serverOnly,
     listScales,
+    listScalesLocal,
+    syncLocalScales,
     createScale,
     getScale,
     setSlot,

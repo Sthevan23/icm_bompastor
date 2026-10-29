@@ -13,6 +13,80 @@ if ($route === 'health' && $method === 'GET') {
     json_response(200, ['ok' => true]);
 }
 
+if ($route === 'scales' && $method === 'GET') {
+    $rows = $pdo->query(
+        'SELECT id, igreja, motivo, date0, date1, atualizado_em FROM escalas ORDER BY atualizado_em DESC'
+    )->fetchAll();
+    $scales = [];
+    foreach ($rows as $row) {
+        $dt = new DateTimeImmutable((string) $row['atualizado_em'], new DateTimeZone('UTC'));
+        $scales[] = [
+            'id' => $row['id'],
+            'igreja' => $row['igreja'],
+            'motivo' => $row['motivo'],
+            'date0' => $row['date0'],
+            'date1' => $row['date1'],
+            'timestamp' => $dt->format('Y-m-d\TH:i:s.000\Z'),
+        ];
+    }
+    json_response(200, ['scales' => $scales]);
+}
+
+if ($route === 'scales/sync' && $method === 'POST') {
+    $body = read_json_body();
+    $id = (string) ($body['id'] ?? '');
+    $token = (string) ($body['ownerToken'] ?? '');
+    $record = $body['record'] ?? null;
+
+    if (!preg_match('/^[a-f0-9]{16}$/', $id) || $token === '' || !is_array($record)) {
+        json_response(400, ['error' => 'invalid']);
+    }
+
+    $igreja = mb_substr(trim((string) ($record['igreja'] ?? '')), 0, 39);
+    $motivo = mb_substr(trim((string) ($record['motivo'] ?? '')), 0, 39);
+    $date0 = (string) ($record['date0'] ?? '');
+    $date1 = (string) ($record['date1'] ?? '');
+    if ($igreja === '' || $motivo === '' || !valid_date($date0) || !valid_date($date1)) {
+        json_response(400, ['error' => 'invalid']);
+    }
+
+    if (fetch_scale($pdo, $id)) {
+        json_response(409, ['error' => 'exists']);
+    }
+
+    $list = $record['currentList'] ?? empty_slot_list();
+    if (!is_array($list)) {
+        $list = empty_slot_list();
+    }
+    $merged = empty_slot_list();
+    foreach (valid_slot_keys() as $key) {
+        $val = $list[$key] ?? null;
+        if ($val !== null && $val !== '') {
+            $merged[$key] = mb_substr(trim((string) $val), 0, 32);
+        }
+    }
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO escalas (id, igreja, motivo, date0, date1, owner_token, current_list)
+         VALUES (:id, :igreja, :motivo, :date0, :date1, :token, :list)'
+    );
+    $stmt->execute([
+        ':id' => $id,
+        ':igreja' => $igreja,
+        ':motivo' => $motivo,
+        ':date0' => $date0,
+        ':date1' => $date1,
+        ':token' => $token,
+        ':list' => json_encode($merged, JSON_UNESCAPED_UNICODE),
+    ]);
+
+    $row = fetch_scale($pdo, $id);
+    json_response(200, [
+        'record' => public_record(row_to_record($row)),
+        'synced' => true,
+    ]);
+}
+
 if ($route === 'scales' && $method === 'POST') {
     $body = read_json_body();
     $igreja = mb_substr(trim((string) ($body['igreja'] ?? '')), 0, 39);

@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 
 try {
     $rows = $pdo->query(
-        'SELECT id, igreja, motivo, date0, date1, atualizado_em FROM escalas ORDER BY atualizado_em DESC'
+        'SELECT id, igreja, motivo, date0, date1, atualizado_em, current_list FROM escalas ORDER BY atualizado_em DESC'
     )->fetchAll();
 } catch (PDOException) {
     admin_fail_page(
@@ -49,6 +49,8 @@ $flash = admin_flash_get();
       <div class="top">
         <h1>Escalas cadastradas</h1>
         <div class="actions">
+          <a class="btn" href="create.php">Nova escala</a>
+          <a class="btn ghost" href="import.php">Importar do navegador</a>
           <a class="btn ghost" href="../index.html">Site público</a>
           <a class="btn ghost" href="logout.php">Sair</a>
         </div>
@@ -61,6 +63,11 @@ $flash = admin_flash_get();
       <div class="card">
         <?php if (!$rows) : ?>
           <p class="muted">Nenhuma escala no banco ainda.</p>
+          <p class="muted" style="margin-top: 0.75rem">
+            Se você vê escalas no site, elas podem estar só no navegador.
+            Use <a href="import.php">Importar do navegador</a> ou crie uma
+            <a href="create.php">nova escala</a> aqui (vai direto para o MySQL).
+          </p>
         <?php else : ?>
           <table>
             <thead>
@@ -68,21 +75,26 @@ $flash = admin_flash_get();
                 <th>Igreja</th>
                 <th>Motivo</th>
                 <th>Período</th>
+                <th>Horários</th>
                 <th>Atualizado</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              <?php foreach ($rows as $row) : ?>
+              <?php foreach ($rows as $row) :
+                  $list = json_decode((string) ($row['current_list'] ?? ''), true);
+                  $filled = is_array($list) ? count_filled_slots($list) : 0;
+                  ?>
                 <tr>
                   <td><?= admin_h($row['igreja']) ?></td>
                   <td><?= admin_h($row['motivo']) ?></td>
                   <td><?= admin_h($row['date0']) ?> → <?= admin_h($row['date1']) ?></td>
+                  <td><?= (int) $filled ?> / 96</td>
                   <td><?= admin_h((string) $row['atualizado_em']) ?></td>
                   <td>
                     <div class="actions">
                       <a class="btn" href="edit.php?id=<?= admin_h($row['id']) ?>">Editar</a>
-                      <a class="btn ghost" href="../escala.html#<?= admin_h($row['id']) ?>" target="_blank" rel="noopener">Ver</a>
+                      <a class="btn ghost" href="../escala.html?id=<?= admin_h($row['id']) ?>" target="_blank" rel="noopener">Ver</a>
                       <form method="post" onsubmit="return confirm('Excluir esta escala?');">
                         <input type="hidden" name="csrf" value="<?= admin_h(admin_csrf_token()) ?>" />
                         <input type="hidden" name="action" value="delete" />
