@@ -1,5 +1,6 @@
 (function () {
   const STORAGE_KEY = "icm-oracao-v1";
+  const CLAIMS_KEY = "icm-oracao-claims-v1";
 
   function apiBase() {
     const base = document.documentElement.dataset.apiBase || "";
@@ -144,6 +145,48 @@
 
   function tokenFor(id) {
     return loadDB().tokens[id] || "";
+  }
+
+  function normName(value) {
+    return String(value || "")
+      .trim()
+      .toLocaleLowerCase("pt-BR");
+  }
+
+  function loadClaimsDb() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(CLAIMS_KEY) || "");
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveClaimsDb(db) {
+    localStorage.setItem(CLAIMS_KEY, JSON.stringify(db));
+  }
+
+  function rememberSlotClaim(scaleId, interval, displayName) {
+    const db = loadClaimsDb();
+    if (!db[scaleId]) db[scaleId] = {};
+    db[scaleId][interval] = String(displayName).trim();
+    saveClaimsDb(db);
+  }
+
+  function forgetSlotClaim(scaleId, interval) {
+    const db = loadClaimsDb();
+    if (db[scaleId]) {
+      delete db[scaleId][interval];
+      saveClaimsDb(db);
+    }
+  }
+
+  /** Só edita horário que esta pessoa registrou neste aparelho. */
+  function canEditSlot(scaleId, interval, currentName) {
+    const db = loadClaimsDb();
+    const claimed = db[scaleId]?.[interval];
+    if (!claimed || !currentName) return false;
+    return normName(claimed) === normName(currentName);
   }
 
   function listScalesLocal() {
@@ -301,18 +344,21 @@
     return loadDB().scales[id] || null;
   }
 
-  async function setSlot(id, interval, name) {
+  async function setSlot(id, interval, name, opts = {}) {
+    const previousName = opts.previousName;
     const online = await hasApi();
     if (serverOnly() && !online) {
       return { ok: false, status: 503, data: null };
     }
     if (online) {
-      const headers = { "Content-Type": "application/json" };
-      if (name == null) headers["X-Owner-Token"] = tokenFor(id);
+      const payload = { interval, name };
+      if (previousName != null && previousName !== "") {
+        payload.previousName = previousName;
+      }
       const response = await fetch(apiUrl(`/api/scales/${encodeURIComponent(id)}/slot`), {
         method: "POST",
-        headers,
-        body: JSON.stringify({ interval, name }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
       const data = await response.json().catch(() => null);
       if (response.ok && data && data.record) {
@@ -324,11 +370,19 @@
     const db = loadDB();
     const record = db.scales[id];
     if (!record) return { ok: false, status: 404, data: null };
-    if (name == null && !db.tokens[id]) return { ok: false, status: 403, data: record };
-    if (name && record.currentList[interval]) {
+    const current = record.currentList[interval];
+    if (name == null) {
+      if (!previousName || normName(current) !== normName(previousName)) {
+        return { ok: false, status: 403, data: record };
+      }
+      record.currentList[interval] = null;
+    } else if (!current) {
+      record.currentList[interval] = name;
+    } else if (previousName && normName(current) === normName(previousName)) {
+      record.currentList[interval] = name;
+    } else {
       return { ok: false, status: 409, data: record };
     }
-    record.currentList[interval] = name;
     record.timestamp = new Date().toISOString();
     saveDB(db);
     return { ok: true, status: 200, data: record };
@@ -406,6 +460,9 @@
     forget,
     pruneLocalScales,
     isOwner,
+    canEditSlot,
+    rememberSlotClaim,
+    forgetSlotClaim,
     remember,
     brDate,
     formatDate,

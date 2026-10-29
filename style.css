@@ -643,6 +643,20 @@ input {
   opacity: 0.85;
 }
 
+.slot-own {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem 0.5rem;
+  max-width: 100%;
+}
+
+.slot-own .registerLink {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.55rem;
+}
+
 .slot-name {
   font-size: 0.88rem;
   font-weight: 600;

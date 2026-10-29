@@ -68,12 +68,6 @@
           </button>
           <span id="optLabel-2">PDF</span>
         </div>
-        <div class="action-item">
-          <button id="dell" class="danger" type="button" disabled aria-label="Excluir escala">
-            <i class="bi bi-trash3"></i>
-          </button>
-          <span id="optLabel-3" class="danger-label">Excluir</span>
-        </div>
       </div>
 
       <div class="slot-list" id="slotList">
@@ -109,7 +103,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=6"></script>
     <script>
       const id = ICM.parseScaleId();
       if (id) ICM.canonicalizeScaleUrl(id);
@@ -155,15 +149,20 @@
           const whoWrap = document.createElement("div");
           const name = state.currentList[interval];
 
-          if (name && owner) {
+          if (name && ICM.canEditSlot(id, interval, name)) {
             row.classList.add("filled");
-            const button = document.createElement("button");
-            button.type = "button";
-            button.className = "removeLink";
-            button.textContent = name;
-            button.title = "Toque para remover";
-            button.addEventListener("click", () => removeRegister(interval, name));
-            whoWrap.append(button);
+            const own = document.createElement("div");
+            own.className = "slot-own";
+            const span = document.createElement("span");
+            span.className = "slot-name";
+            span.textContent = name;
+            const editBtn = document.createElement("button");
+            editBtn.type = "button";
+            editBtn.className = "registerLink";
+            editBtn.textContent = "Editar";
+            editBtn.addEventListener("click", () => editRegister(interval, name));
+            own.append(span, editBtn);
+            whoWrap.append(own);
           } else if (name) {
             row.classList.add("filled");
             const span = document.createElement("span");
@@ -187,11 +186,9 @@
       function enableActions() {
         document.getElementById("copyButton").disabled = false;
         document.getElementById("downloadButton").disabled = !owner;
-        document.getElementById("dell").disabled = !owner;
         document.getElementById("optLabel-1").classList.add("on");
         if (owner) {
           document.getElementById("optLabel-2").classList.add("on");
-          document.getElementById("optLabel-3").classList.add("on");
         }
       }
 
@@ -236,6 +233,7 @@
             ...buttons(),
           });
         } else {
+          ICM.rememberSlotClaim(id, interval, name);
           await Swal.fire({
             title: "Registrado!",
             text: "Sua participação foi salva com sucesso.",
@@ -248,37 +246,83 @@
         if (state) render();
       }
 
-      async function removeRegister(interval, name) {
+      async function editRegister(interval, currentName) {
         const result = await Swal.fire({
-          title: "Remover inscrição?",
-          html: `<strong>${name}</strong><br><small>${interval}</small>`,
-          icon: "question",
+          title: interval,
+          text: "Altere seu nome ou saia deste horário",
+          input: "text",
+          inputValue: currentName,
+          inputAttributes: { placeholder: "Seu nome", maxlength: "32" },
           showCancelButton: true,
+          showDenyButton: true,
           reverseButtons: true,
-          confirmButtonText: "Sim, remover",
           cancelButtonText: "Cancelar",
+          denyButtonText: "Sair do horário",
+          confirmButtonText: "Salvar",
           customClass: ICM.swalButtons(),
+          inputValidator: (value) => {
+            if (value.trim() === "") return "O nome não pode ser vazio";
+            if (value.trim().length > 32) return "Máximo de 32 caracteres";
+            return undefined;
+          },
         });
-        if (!result.isConfirmed) return;
+
+        if (result.isDenied) {
+          openLoading("Aguarde...");
+          const response = await ICM.setSlot(id, interval, null, { previousName: currentName });
+          Swal.close();
+          if (response.data?.record) state = response.data.record;
+          else if (response.data?.currentList) state = response.data;
+          if (!response.ok) {
+            await Swal.fire({
+              title: "Erro",
+              text: "Só é possível sair do horário que você registrou neste aparelho.",
+              icon: "warning",
+              ...buttons(),
+            });
+          } else {
+            ICM.forgetSlotClaim(id, interval);
+          }
+          if (state) render();
+          return;
+        }
+
+        if (!result.value) return;
+        const newName = result.value.trim();
+        if (normName(newName) === normName(currentName)) return;
 
         openLoading("Aguarde...");
-        const response = await ICM.setSlot(id, interval, null);
+        const response = await ICM.setSlot(id, interval, newName, { previousName: currentName });
         Swal.close();
-        if (response.data && response.data.record) state = response.data.record;
-        else if (response.data && response.data.currentList) state = response.data;
+        if (response.data?.record) state = response.data.record;
+        else if (response.data?.currentList) state = response.data;
 
         if (!response.ok) {
           await Swal.fire({
-            title: "Erro",
-            text: "Não foi possível remover.",
+            title: "Não foi possível alterar",
+            text:
+              response.status === 403
+                ? "Só você pode editar o horário que registrou neste aparelho."
+                : "Este horário já foi preenchido por outra pessoa.",
             icon: "warning",
             ...buttons(),
           });
+        } else {
+          ICM.rememberSlotClaim(id, interval, newName);
+          await Swal.fire({
+            title: "Atualizado!",
+            icon: "success",
+            timer: 1400,
+            showConfirmButton: false,
+          });
         }
-        if (state) {
-          ICM.remember(state);
-          render();
-        }
+        if (state) render();
+      }
+
+      function normName(value) {
+        return String(value || "")
+          .trim()
+          .toLocaleLowerCase("pt-BR");
       }
 
       function messageText() {
@@ -377,33 +421,6 @@ ${ICM.scaleShareUrl(id)}`;
           });
         } finally {
           Swal.close();
-        }
-      });
-
-      document.getElementById("dell").addEventListener("click", async () => {
-        const result = await Swal.fire({
-          title: "Excluir escala?",
-          text: "Todos os horários e nomes serão apagados.",
-          icon: "warning",
-          showCancelButton: true,
-          reverseButtons: true,
-          confirmButtonText: "Sim, excluir",
-          cancelButtonText: "Cancelar",
-          customClass: ICM.swalButtons(),
-        });
-        if (!result.isConfirmed) return;
-        openLoading("Aguarde...");
-        try {
-          await ICM.deleteScale(id);
-          Swal.close();
-          window.location.href = "index.html";
-        } catch {
-          Swal.fire({
-            title: "Erro",
-            text: "Não foi possível excluir.",
-            icon: "error",
-            ...buttons(),
-          });
         }
       });
 

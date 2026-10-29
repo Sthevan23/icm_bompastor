@@ -80,6 +80,11 @@ function slot_fill_percentage(int $filled, int $total = 96): string
     return number_format($pct, 1, ',', '.');
 }
 
+function slot_names_match(?string $a, ?string $b): bool
+{
+    return mb_strtolower(trim((string) $a)) === mb_strtolower(trim((string) $b));
+}
+
 function format_datetime_br(?string $utc): string
 {
     if ($utc === null || trim($utc) === '') {

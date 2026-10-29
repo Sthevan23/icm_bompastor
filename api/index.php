@@ -135,16 +135,7 @@ if (preg_match('#^scales/([a-f0-9]{16})$#', $route, $m) && $method === 'GET') {
 }
 
 if (preg_match('#^scales/([a-f0-9]{16})$#', $route, $m) && $method === 'DELETE') {
-    $row = fetch_scale($pdo, $m[1]);
-    if (!$row) {
-        json_response(404, ['error' => 'missing']);
-    }
-    if (!hash_equals((string) $row['owner_token'], $ownerToken)) {
-        json_response(403, ['error' => 'forbidden']);
-    }
-    $del = $pdo->prepare('DELETE FROM escalas WHERE id = :id');
-    $del->execute([':id' => $m[1]]);
-    json_response(200, ['ok' => true]);
+    json_response(403, ['error' => 'admin_only']);
 }
 
 if (preg_match('#^scales/([a-f0-9]{16})/slot$#', $route, $m) && $method === 'POST') {
@@ -170,8 +161,17 @@ if (preg_match('#^scales/([a-f0-9]{16})/slot$#', $route, $m) && $method === 'POS
         $record = row_to_record($row);
         $public = public_record($record);
 
+        $previousName = array_key_exists('previousName', $body)
+            ? mb_substr(trim((string) $body['previousName']), 0, 32)
+            : null;
+        $current = $record['currentList'][$interval] ?? null;
+
         if ($name === null) {
-            if (!hash_equals((string) $row['owner_token'], $ownerToken)) {
+            if (
+                $previousName === null
+                || $previousName === ''
+                || !slot_names_match((string) $current, $previousName)
+            ) {
                 $pdo->rollBack();
                 json_response(403, ['error' => 'forbidden', 'record' => $public]);
             }
@@ -182,11 +182,18 @@ if (preg_match('#^scales/([a-f0-9]{16})/slot$#', $route, $m) && $method === 'POS
                 $pdo->rollBack();
                 json_response(400, ['error' => 'name', 'record' => $public]);
             }
-            if (!empty($record['currentList'][$interval])) {
+            if ($current === null || $current === '') {
+                $record['currentList'][$interval] = $clean;
+            } elseif (
+                $previousName !== null
+                && $previousName !== ''
+                && slot_names_match((string) $current, $previousName)
+            ) {
+                $record['currentList'][$interval] = $clean;
+            } else {
                 $pdo->rollBack();
                 json_response(409, ['error' => 'occupied', 'record' => $public]);
             }
-            $record['currentList'][$interval] = $clean;
         }
 
         $upd = $pdo->prepare(

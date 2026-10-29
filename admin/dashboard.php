@@ -47,7 +47,12 @@ $flash = admin_flash_get();
   <body>
     <div class="wrap">
       <div class="top">
-        <h1>Escalas cadastradas</h1>
+        <div>
+          <h1>Escalas cadastradas</h1>
+          <p class="muted" style="margin: 0.25rem 0 0; font-size: 0.9rem">
+            Só aqui no painel é possível excluir a escala inteira.
+          </p>
+        </div>
         <div class="actions">
           <a class="btn" href="create.php">Nova escala</a>
           <a class="btn ghost" href="import.php">Importar do navegador</a>
