@@ -355,32 +355,31 @@
       }
 
       function messageLink() {
-        return `📜 *ESCALA DA ORAÇÃO ININTERRUPTA*
+        return `*ESCALA DA ORAÇÃO ININTERRUPTA*
 
-_Igreja: ${state.igreja}_
-_Motivo: ${state.motivo}_
-_Período: ${ICM.brDate(state.date0)} – ${ICM.brDate(state.date1)}_
+Igreja: ${state.igreja}
+Motivo: ${state.motivo}
+Período: ${ICM.brDate(state.date0)} – ${ICM.brDate(state.date1)}
 
 Para participar, acesse:
 ${ICM.scaleShareUrl(id)}`;
       }
 
       function messageFilledList() {
-        const lines = [];
+        const blocks = [];
         for (const [interval, name] of Object.entries(state.currentList)) {
-          if (name) lines.push(`• ${interval} — ${name}`);
+          if (name) blocks.push(`${interval}\n${name}`);
         }
-        const stats = ICM.stats(state.currentList);
-        let text = `📜 *ESCALA DA ORAÇÃO ININTERRUPTA*\n\n`;
-        text += `*${state.igreja}*\n${state.motivo}\n`;
-        text += `Período: ${ICM.brDate(state.date0)} – ${ICM.brDate(state.date1)}\n`;
-        text += `Preenchidos: ${stats.filled} de ${stats.total} (${stats.percentage}%)\n\n`;
-        if (lines.length) {
-          text += `*Horários já preenchidos:*\n${lines.join("\n")}\n\n`;
+        let text = `*ESCALA DA ORAÇÃO ININTERRUPTA*\n\n`;
+        text += `Igreja: ${state.igreja}\n`;
+        text += `Motivo: ${state.motivo}\n`;
+        text += `Período: ${ICM.brDate(state.date0)} – ${ICM.brDate(state.date1)}\n\n`;
+        if (blocks.length) {
+          text += `*Horários:*\n\n${blocks.join("\n\n")}\n\n`;
         } else {
-          text += `_Nenhum horário preenchido ainda._\n\n`;
+          text += `Nenhum horário preenchido ainda.\n\n`;
         }
-        text += `Para se inscrever em um horário vazio:\n${ICM.scaleShareUrl(id)}`;
+        text += `Para se inscrever:\n${ICM.scaleShareUrl(id)}`;
         return text;
       }
 
