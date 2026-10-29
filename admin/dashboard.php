@@ -42,7 +42,7 @@ $flash = admin_flash_get();
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Escalas · Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="admin.css" />
+    <link rel="stylesheet" href="admin.css?v=2" />
   </head>
   <body>
     <div class="wrap">
@@ -74,47 +74,49 @@ $flash = admin_flash_get();
             <a href="create.php">nova escala</a> aqui (vai direto para o MySQL).
           </p>
         <?php else : ?>
-          <table>
-            <thead>
-              <tr>
-                <th>Igreja</th>
-                <th>Motivo</th>
-                <th>Período</th>
-                <th>Preenchimento</th>
-                <th>Último registro</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach ($rows as $row) :
-                  $list = json_decode((string) ($row['current_list'] ?? ''), true);
-                  $filled = is_array($list) ? count_filled_slots($list) : 0;
-                  ?>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
                 <tr>
-                  <td><?= admin_h($row['igreja']) ?></td>
-                  <td><?= admin_h($row['motivo']) ?></td>
-                  <td><?= admin_h($row['date0']) ?> → <?= admin_h($row['date1']) ?></td>
-                  <td>
-                    <?= admin_h(slot_fill_percentage($filled)) ?>%
-                    · <?= (int) $filled ?> de 96 horários
-                  </td>
-                  <td><?= admin_h(format_datetime_br((string) $row['atualizado_em'])) ?></td>
-                  <td>
-                    <div class="actions">
-                      <a class="btn" href="edit.php?id=<?= admin_h($row['id']) ?>">Editar</a>
-                      <a class="btn ghost" href="../escala.html?id=<?= admin_h($row['id']) ?>" target="_blank" rel="noopener">Ver</a>
-                      <form method="post" onsubmit="return confirm('Excluir esta escala?');">
-                        <input type="hidden" name="csrf" value="<?= admin_h(admin_csrf_token()) ?>" />
-                        <input type="hidden" name="action" value="delete" />
-                        <input type="hidden" name="id" value="<?= admin_h($row['id']) ?>" />
-                        <button class="btn danger" type="submit">Excluir</button>
-                      </form>
-                    </div>
-                  </td>
+                  <th>Igreja</th>
+                  <th>Motivo</th>
+                  <th>Período</th>
+                  <th>Preenchimento</th>
+                  <th>Último registro</th>
+                  <th class="col-actions">Ações</th>
                 </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                <?php foreach ($rows as $row) :
+                    $list = json_decode((string) ($row['current_list'] ?? ''), true);
+                    $filled = is_array($list) ? count_filled_slots($list) : 0;
+                    ?>
+                  <tr>
+                    <td><?= admin_h($row['igreja']) ?></td>
+                    <td><?= admin_h($row['motivo']) ?></td>
+                    <td><?= admin_h($row['date0']) ?> → <?= admin_h($row['date1']) ?></td>
+                    <td>
+                      <?= admin_h(slot_fill_percentage($filled)) ?>%
+                      · <?= (int) $filled ?> de 96 horários
+                    </td>
+                    <td><?= admin_h(format_datetime_br((string) $row['atualizado_em'])) ?></td>
+                    <td class="col-actions">
+                      <div class="row-actions">
+                        <a class="btn" href="edit.php?id=<?= admin_h($row['id']) ?>">Editar</a>
+                        <a class="btn ghost" href="../escala.html?id=<?= admin_h($row['id']) ?>" target="_blank" rel="noopener">Ver</a>
+                        <form method="post" onsubmit="return confirm('Excluir esta escala?');">
+                          <input type="hidden" name="csrf" value="<?= admin_h(admin_csrf_token()) ?>" />
+                          <input type="hidden" name="action" value="delete" />
+                          <input type="hidden" name="id" value="<?= admin_h($row['id']) ?>" />
+                          <button class="btn danger" type="submit">Excluir</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
         <?php endif; ?>
       </div>
     </div>

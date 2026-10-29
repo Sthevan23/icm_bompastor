@@ -26,7 +26,7 @@ a {
 }
 
 .wrap {
-  width: min(960px, calc(100% - 24px));
+  width: min(1100px, calc(100% - 24px));
   margin: 0 auto;
   padding: 1.25rem 0 2.5rem;
 }
@@ -136,10 +136,27 @@ input:focus {
   border: 1px solid #fbd5da;
 }
 
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -0.15rem;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+}
+
+table.data-table {
+  min-width: 52rem;
+}
+
+table.data-table th,
+table.data-table td {
+  white-space: nowrap;
+  vertical-align: middle;
+  padding: 0.75rem 0.85rem;
 }
 
 th,
@@ -160,6 +177,26 @@ th {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
+}
+
+.top .actions {
+  justify-content: flex-end;
+}
+
+.row-actions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.row-actions form {
+  display: inline-flex;
+  margin: 0;
+}
+
+.col-actions {
+  text-align: right;
 }
 
 .slots {
