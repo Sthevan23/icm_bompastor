@@ -16,7 +16,7 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css?v=3" />
+    <link rel="stylesheet" href="style.css?v=4" />
   </head>
   <body>
     <div class="bg" aria-hidden="true">
@@ -69,17 +69,6 @@
           <span id="optLabel-2">PDF</span>
         </div>
       </div>
-
-      <p class="hint hint-elder" id="slotHint" hidden>
-        <i class="bi bi-info-circle" aria-hidden="true"></i>
-        <span
-          >Toque em <strong>Escolher este horário</strong> na linha certa. Cada horário dura
-          <strong>15 minutos</strong> — veja <strong>início</strong> e <strong>fim</strong> em
-          letras grandes.</span
-        >
-      </p>
-
-      <nav class="slot-jump" id="slotJump" aria-label="Ir para parte do dia" hidden></nav>
 
       <div class="slot-list" id="slotList">
         <div class="loading-row">Buscando a lista...</div>
@@ -137,170 +126,61 @@
         });
       }
 
-      const DAY_PARTS = [
-        {
-          id: "madrugada",
-          label: "Madrugada",
-          hint: "0h às 6h",
-          icon: "bi-moon-stars-fill",
-          fromMin: 0,
-          toMin: 360,
-        },
-        {
-          id: "manha",
-          label: "Manhã",
-          hint: "6h às 12h",
-          icon: "bi-sunrise-fill",
-          fromMin: 360,
-          toMin: 720,
-        },
-        {
-          id: "tarde",
-          label: "Tarde",
-          hint: "12h às 18h",
-          icon: "bi-sun-fill",
-          fromMin: 720,
-          toMin: 1080,
-        },
-        {
-          id: "noite",
-          label: "Noite",
-          hint: "18h às 24h",
-          icon: "bi-moon-fill",
-          fromMin: 1080,
-          toMin: 1440,
-        },
-      ];
-
-      function parseIntervalKey(key) {
-        const m = String(key).match(/^(\d{2}:\d{2})\s*às\s*(\d{2}:\d{2})$/);
-        return m ? { start: m[1], end: m[2] } : { start: "—", end: "—" };
-      }
-
-      function minutesFromClock(clock) {
-        const [h, min] = String(clock).split(":").map((n) => parseInt(n, 10));
-        if (Number.isNaN(h) || Number.isNaN(min)) return 0;
-        return h * 60 + min;
-      }
-
-      function dayPartForInterval(interval) {
-        const { start } = parseIntervalKey(interval);
-        const mins = minutesFromClock(start);
-        return (
-          DAY_PARTS.find((p) => mins >= p.fromMin && mins < p.toMin) ||
-          DAY_PARTS[DAY_PARTS.length - 1]
-        );
-      }
-
-      function friendlyInterval(interval) {
-        const { start, end } = parseIntervalKey(interval);
-        return `Das ${start} até ${end}`;
-      }
-
-      function buildSlotJump() {
-        const nav = document.getElementById("slotJump");
-        nav.replaceChildren();
-        for (const part of DAY_PARTS) {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "slot-jump-btn";
-          btn.innerHTML = `<i class="bi ${part.icon}"></i><span>${part.label}</span>`;
-          btn.addEventListener("click", () => {
-            const target = document.getElementById(`part-${part.id}`);
-            target?.scrollIntoView({ behavior: "smooth", block: "start" });
-          });
-          nav.append(btn);
-        }
-        nav.hidden = false;
-      }
-
-      function appendSlotRow(list, interval, name, animIndex) {
-        const row = document.createElement("div");
-        row.className = "slot-row";
-        if (animIndex < 8) row.style.animationDelay = `${animIndex * 0.03}s`;
-
-        const { start, end } = parseIntervalKey(interval);
-        const time = document.createElement("div");
-        time.className = "slot-time-block";
-        time.innerHTML =
-          `<p class="slot-time-line"><span class="slot-k">Início</span> <strong class="slot-h">${start}</strong></p>` +
-          `<p class="slot-time-line"><span class="slot-k">Fim</span> <strong class="slot-h">${end}</strong></p>` +
-          `<p class="slot-time-dur">15 minutos de oração</p>`;
-
-        const whoWrap = document.createElement("div");
-        whoWrap.className = "slot-who";
-
-        if (name && ICM.canEditSlot(id, interval, name)) {
-          row.classList.add("filled", "mine");
-          const own = document.createElement("div");
-          own.className = "slot-own";
-          const label = document.createElement("p");
-          label.className = "slot-status slot-status-mine";
-          label.textContent = `Seu horário: ${name}`;
-          const editBtn = document.createElement("button");
-          editBtn.type = "button";
-          editBtn.className = "registerLink registerLink-lg";
-          editBtn.textContent = "Alterar meu nome";
-          editBtn.addEventListener("click", () => editRegister(interval, name));
-          own.append(label, editBtn);
-          whoWrap.append(own);
-        } else if (name) {
-          row.classList.add("filled", "taken");
-          const label = document.createElement("p");
-          label.className = "slot-status slot-status-taken";
-          label.innerHTML = `<span class="slot-k">Ocupado</span> <strong>${escapeHtml(name)}</strong>`;
-          whoWrap.append(label);
-        } else {
-          row.classList.add("free");
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "registerLink registerLink-lg";
-          button.textContent = "Escolher este horário";
-          button.setAttribute("aria-label", `${friendlyInterval(interval)} — escolher`);
-          button.addEventListener("click", () => register(interval));
-          whoWrap.append(button);
-        }
-
-        row.append(time, whoWrap);
-        list.append(row);
-      }
-
-      function escapeHtml(text) {
-        const div = document.createElement("div");
-        div.textContent = text;
-        return div.innerHTML;
-      }
-
       function render() {
         document.getElementById("igreja").textContent = state.igreja;
         document.getElementById("motivo").textContent = state.motivo;
         document.getElementById("periodo").textContent =
           `${ICM.brDate(state.date0)} – ${ICM.brDate(state.date1)}`;
 
-        document.getElementById("slotHint").hidden = false;
-        buildSlotJump();
-
         const list = document.getElementById("slotList");
         list.replaceChildren();
 
-        const intervals = Object.keys(state.currentList);
-        let anim = 0;
-        let currentPartId = null;
+        let i = 0;
+        for (const interval of Object.keys(state.currentList)) {
+          const row = document.createElement("div");
+          row.className = "slot-row";
+          if (i < 12) row.style.animationDelay = `${i * 0.04}s`;
+          i += 1;
 
-        for (const interval of intervals) {
-          const part = dayPartForInterval(interval);
-          if (part.id !== currentPartId) {
-            currentPartId = part.id;
-            const head = document.createElement("div");
-            head.className = "slot-part";
-            head.id = `part-${part.id}`;
-            head.innerHTML =
-              `<div class="slot-part-icon"><i class="bi ${part.icon}"></i></div>` +
-              `<div class="slot-part-text"><strong>${part.label}</strong><span>${part.hint}</span></div>`;
-            list.append(head);
+          const time = document.createElement("div");
+          time.className = "slot-time";
+          time.innerHTML = `<i class="bi bi-clock"></i> ${interval}`;
+
+          const whoWrap = document.createElement("div");
+          whoWrap.className = "slot-who";
+          const name = state.currentList[interval];
+
+          if (name && ICM.canEditSlot(id, interval, name)) {
+            row.classList.add("filled");
+            const own = document.createElement("div");
+            own.className = "slot-own";
+            const span = document.createElement("span");
+            span.className = "slot-name";
+            span.textContent = name;
+            const editBtn = document.createElement("button");
+            editBtn.type = "button";
+            editBtn.className = "registerLink";
+            editBtn.textContent = "Editar";
+            editBtn.addEventListener("click", () => editRegister(interval, name));
+            own.append(span, editBtn);
+            whoWrap.append(own);
+          } else if (name) {
+            row.classList.add("filled");
+            const span = document.createElement("span");
+            span.className = "slot-name";
+            span.textContent = name;
+            whoWrap.append(span);
+          } else {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "registerLink";
+            button.textContent = "Registrar";
+            button.addEventListener("click", () => register(interval));
+            whoWrap.append(button);
           }
-          appendSlotRow(list, interval, state.currentList[interval], anim);
-          anim += 1;
+
+          row.append(time, whoWrap);
+          list.append(row);
         }
       }
 
@@ -315,8 +195,8 @@
 
       async function register(interval) {
         const result = await Swal.fire({
-          title: friendlyInterval(interval),
-          text: "Escreva seu nome completo ou como a igreja te conhece.",
+          title: interval,
+          text: "Informe seu nome para este horário",
           input: "text",
           inputAttributes: { placeholder: "Seu nome", maxlength: "32" },
           showCancelButton: true,
@@ -369,8 +249,8 @@
 
       async function editRegister(interval, currentName) {
         const result = await Swal.fire({
-          title: friendlyInterval(interval),
-          text: "Altere seu nome ou toque em Sair do horário",
+          title: interval,
+          text: "Altere seu nome ou saia deste horário",
           input: "text",
           inputValue: currentName,
           inputAttributes: { placeholder: "Seu nome", maxlength: "32" },
