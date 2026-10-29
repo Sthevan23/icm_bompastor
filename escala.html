@@ -53,17 +53,6 @@
             <span class="v" id="periodo">—</span>
           </div>
         </div>
-        <div class="progress-block">
-          <div class="progress-head">
-            <span>Horários preenchidos</span>
-            <span id="pctLabel">0%</span>
-          </div>
-          <div class="progress-track">
-            <div class="progress-fill" id="progressFill"></div>
-          </div>
-          <p class="meta-line" id="preenchidos"></p>
-          <p class="meta-line" id="atualizado"></p>
-        </div>
       </section>
 
       <div class="actions delay-2">
@@ -148,15 +137,6 @@
         document.getElementById("motivo").textContent = state.motivo;
         document.getElementById("periodo").textContent =
           `${ICM.brDate(state.date0)} – ${ICM.brDate(state.date1)}`;
-
-        const count = ICM.stats(state.currentList);
-        const pct = count.total ? (count.filled / count.total) * 100 : 0;
-        document.getElementById("pctLabel").textContent = `${count.percentage}%`;
-        document.getElementById("progressFill").style.width = `${pct}%`;
-        document.getElementById("preenchidos").innerHTML =
-          `<i class="bi bi-check2-circle"></i> ${count.filled} de ${count.total} horários`;
-        document.getElementById("atualizado").innerHTML =
-          `<i class="bi bi-clock-history"></i> Último registro: ${ICM.formatDate(state.timestamp)}`;
 
         const list = document.getElementById("slotList");
         list.replaceChildren();

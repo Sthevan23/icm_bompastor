@@ -75,8 +75,8 @@ $flash = admin_flash_get();
                 <th>Igreja</th>
                 <th>Motivo</th>
                 <th>Período</th>
-                <th>Horários</th>
-                <th>Atualizado</th>
+                <th>Preenchimento</th>
+                <th>Último registro</th>
                 <th></th>
               </tr>
             </thead>
@@ -89,8 +89,11 @@ $flash = admin_flash_get();
                   <td><?= admin_h($row['igreja']) ?></td>
                   <td><?= admin_h($row['motivo']) ?></td>
                   <td><?= admin_h($row['date0']) ?> → <?= admin_h($row['date1']) ?></td>
-                  <td><?= (int) $filled ?> / 96</td>
-                  <td><?= admin_h((string) $row['atualizado_em']) ?></td>
+                  <td>
+                    <?= admin_h(slot_fill_percentage($filled)) ?>%
+                    · <?= (int) $filled ?> de 96 horários
+                  </td>
+                  <td><?= admin_h(format_datetime_br((string) $row['atualizado_em'])) ?></td>
                   <td>
                     <div class="actions">
                       <a class="btn" href="edit.php?id=<?= admin_h($row['id']) ?>">Editar</a>

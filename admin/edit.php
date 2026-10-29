@@ -71,6 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save'
 
 $record = row_to_record($row);
 $filledCount = count_filled_slots($record['currentList']);
+$fillPct = slot_fill_percentage($filledCount);
+$lastUpdate = format_datetime_br((string) ($row['atualizado_em'] ?? ''));
 $flash = admin_flash_get();
 ?>
 <!DOCTYPE html>
@@ -120,11 +122,18 @@ $flash = admin_flash_get();
           </div>
         </div>
 
+        <div class="card" style="margin-bottom: 1rem; padding: 1rem 1.15rem">
+          <p style="margin: 0 0 0.35rem; font-weight: 600">Horários preenchidos</p>
+          <p style="margin: 0 0 0.5rem; font-size: 1.35rem; color: #9b0b22">
+            <?= admin_h($fillPct) ?>% · <?= (int) $filledCount ?> de 96 horários
+          </p>
+          <p class="muted" style="margin: 0">
+            Último registro: <?= admin_h($lastUpdate) ?>
+          </p>
+        </div>
+
         <p class="muted" style="margin: 0 0 0.5rem">
-          ID: <code><?= admin_h($id) ?></code> —
-          <strong><?= (int) $filledCount ?> / 96</strong> horários preenchidos no servidor.
-          Se estiver 0 mas o site mostra nomes, use
-          <a href="import.php">Importar do navegador</a> no aparelho onde cadastrou ontem.
+          ID: <code><?= admin_h($id) ?></code>
         </p>
 
         <div class="slots">

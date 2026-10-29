@@ -71,6 +71,29 @@ function count_filled_slots(array $list): int
     return $n;
 }
 
+function slot_fill_percentage(int $filled, int $total = 96): string
+{
+    if ($total <= 0) {
+        return '0';
+    }
+    $pct = round($filled / $total * 1000) / 10;
+    return number_format($pct, 1, ',', '.');
+}
+
+function format_datetime_br(?string $utc): string
+{
+    if ($utc === null || trim($utc) === '') {
+        return '—';
+    }
+    try {
+        $dt = new DateTimeImmutable($utc, new DateTimeZone('UTC'));
+        $dt = $dt->setTimezone(new DateTimeZone('America/Sao_Paulo'));
+        return $dt->format('d/m/Y H:i:s');
+    } catch (Exception) {
+        return $utc;
+    }
+}
+
 function json_response(int $status, array $payload): void
 {
     http_response_code($status);
