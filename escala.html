@@ -16,7 +16,7 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css?v=5" />
+    <link rel="stylesheet" href="style.css?v=6" />
   </head>
   <body class="page-escala">
     <div class="bg" aria-hidden="true">
@@ -57,16 +57,22 @@
 
       <div class="actions actions-compact delay-2">
         <div class="action-item">
-          <button id="copyButton" type="button" disabled aria-label="Copiar link">
+          <button id="copyButton" type="button" disabled aria-label="Compartilhar link da escala">
+            <i class="bi bi-link-45deg"></i>
+          </button>
+          <span id="optLabel-1">Link</span>
+        </div>
+        <div class="action-item">
+          <button id="whatsappListButton" type="button" disabled aria-label="Enviar lista no WhatsApp">
             <i class="bi bi-whatsapp"></i>
           </button>
-          <span id="optLabel-1">Compartilhar</span>
+          <span id="optLabel-2">Lista WhatsApp</span>
         </div>
         <div class="action-item">
           <button id="downloadButton" type="button" disabled aria-label="Baixar PDF">
             <i class="bi bi-file-earmark-pdf"></i>
           </button>
-          <span id="optLabel-2">PDF</span>
+          <span id="optLabel-3">PDF</span>
         </div>
       </div>
 
@@ -186,11 +192,33 @@
 
       function enableActions() {
         document.getElementById("copyButton").disabled = false;
-        document.getElementById("downloadButton").disabled = !owner;
+        document.getElementById("whatsappListButton").disabled = false;
+        document.getElementById("downloadButton").disabled = false;
         document.getElementById("optLabel-1").classList.add("on");
-        if (owner) {
-          document.getElementById("optLabel-2").classList.add("on");
+        document.getElementById("optLabel-2").classList.add("on");
+        document.getElementById("optLabel-3").classList.add("on");
+      }
+
+      async function ensureScaleOnline() {
+        openLoading("Verificando...");
+        let ok = false;
+        try {
+          const check = await ICM.getScale(id);
+          ok = Boolean(check);
+          if (check) state = check;
+        } catch {
+          ok = false;
         }
+        Swal.close();
+        if (!ok) {
+          await Swal.fire({
+            title: "Ainda não está online",
+            text: "Esta escala não está salva no servidor. Crie de novo pelo botão Nova na página inicial (com internet).",
+            icon: "warning",
+            ...buttons(),
+          });
+        }
+        return ok;
       }
 
       async function register(interval) {
@@ -326,7 +354,7 @@
           .toLocaleLowerCase("pt-BR");
       }
 
-      function messageText() {
+      function messageLink() {
         return `📜 *ESCALA DA ORAÇÃO ININTERRUPTA*
 
 _Igreja: ${state.igreja}_
@@ -337,34 +365,33 @@ Para participar, acesse:
 ${ICM.scaleShareUrl(id)}`;
       }
 
-      document.getElementById("copyButton").addEventListener("click", async () => {
-        if (!state) return;
-        openLoading("Verificando link...");
-        let ok = false;
-        try {
-          const check = await ICM.getScale(id);
-          ok = Boolean(check);
-        } catch {
-          ok = false;
+      function messageFilledList() {
+        const lines = [];
+        for (const [interval, name] of Object.entries(state.currentList)) {
+          if (name) lines.push(`• ${interval} — ${name}`);
         }
-        Swal.close();
-        if (!ok) {
-          await Swal.fire({
-            title: "Ainda não está online",
-            text: "Esta escala não está salva no servidor. Crie de novo pelo botão Nova na página inicial (com internet) e compartilhe outra vez.",
-            icon: "warning",
-            ...buttons(),
-          });
-          return;
+        const stats = ICM.stats(state.currentList);
+        let text = `📜 *ESCALA DA ORAÇÃO ININTERRUPTA*\n\n`;
+        text += `*${state.igreja}*\n${state.motivo}\n`;
+        text += `Período: ${ICM.brDate(state.date0)} – ${ICM.brDate(state.date1)}\n`;
+        text += `Preenchidos: ${stats.filled} de ${stats.total} (${stats.percentage}%)\n\n`;
+        if (lines.length) {
+          text += `*Horários já preenchidos:*\n${lines.join("\n")}\n\n`;
+        } else {
+          text += `_Nenhum horário preenchido ainda._\n\n`;
         }
-        const text = messageText();
+        text += `Para se inscrever em um horário vazio:\n${ICM.scaleShareUrl(id)}`;
+        return text;
+      }
+
+      async function copyOrShowText(text, successHint) {
         try {
           await navigator.clipboard.writeText(text);
           Swal.fire({
             title: "Copiado!",
-            text: "Cole no WhatsApp e envie para a igreja.",
+            text: successHint,
             icon: "success",
-            timer: 1600,
+            timer: 1800,
             showConfirmButton: false,
           });
         } catch {
@@ -376,51 +403,105 @@ ${ICM.scaleShareUrl(id)}`;
             customClass: ICM.swalButtons(),
           });
         }
+      }
+
+      document.getElementById("copyButton").addEventListener("click", async () => {
+        if (!state) return;
+        if (!(await ensureScaleOnline())) return;
+        await copyOrShowText(messageLink(), "Cole no WhatsApp e envie o link da escala.");
+      });
+
+      document.getElementById("whatsappListButton").addEventListener("click", async () => {
+        if (!state) return;
+        if (!(await ensureScaleOnline())) return;
+        const text = messageFilledList();
+        const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        const opened = window.open(url, "_blank", "noopener,noreferrer");
+        if (!opened) {
+          await copyOrShowText(text, "Cole no WhatsApp — mensagem com os horários preenchidos.");
+        }
       });
 
       function fillPdfColumn(target, rows) {
         target.replaceChildren();
         for (const [interval, name] of rows) {
           const row = document.createElement("tr");
+          if (name) row.className = "pdf-filled";
           const time = document.createElement("td");
           time.textContent = interval;
           const who = document.createElement("td");
-          who.textContent = name || "";
+          who.textContent = name || "—";
           row.append(time, who);
           target.append(row);
         }
       }
 
       document.getElementById("downloadButton").addEventListener("click", async () => {
-        if (!owner || !state || typeof html2pdf === "undefined") return;
+        if (!state || typeof html2pdf === "undefined") return;
         const entries = Object.entries(state.currentList);
+        const stats = ICM.stats(state.currentList);
         fillPdfColumn(document.getElementById("pdfLeft"), entries.slice(0, 48));
         fillPdfColumn(document.getElementById("pdfRight"), entries.slice(48));
+
+        const logo = document.querySelector("#pdfSheet img");
+        logo.src = new URL("logo.svg", window.location.href).href;
+
         document.getElementById("pdfMeta").textContent =
-          `Igreja: ${state.igreja}\nMotivo: ${state.motivo}\nPeríodo: ${ICM.brDate(state.date0)} – ${ICM.brDate(state.date1)}`;
+          `Igreja: ${state.igreja}\n` +
+          `Motivo: ${state.motivo}\n` +
+          `Período: ${ICM.brDate(state.date0)} – ${ICM.brDate(state.date1)}\n` +
+          `Preenchidos: ${stats.filled} de ${stats.total} (${stats.percentage}%)\n` +
+          `Link: ${ICM.scaleShareUrl(id)}`;
 
         const sheet = document.getElementById("pdfSheet");
+        const saved = {
+          position: sheet.style.position,
+          left: sheet.style.left,
+          top: sheet.style.top,
+          opacity: sheet.style.opacity,
+          zIndex: sheet.style.zIndex,
+        };
+
+        sheet.style.position = "fixed";
+        sheet.style.left = "0";
+        sheet.style.top = "0";
+        sheet.style.opacity = "0.01";
+        sheet.style.zIndex = "-1";
+
         openLoading("Gerando PDF...");
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
         try {
           await html2pdf()
             .set({
-              margin: [8, 8, 8, 8],
+              margin: [10, 10, 10, 10],
               filename: "escala-oracao-ininterrupta.pdf",
-              image: { type: "jpeg", quality: 0.98 },
-              html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
+              image: { type: "jpeg", quality: 0.95 },
+              html2canvas: {
+                scale: 2,
+                useCORS: true,
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: 794,
+              },
               jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-              pagebreak: { mode: ["css", "legacy"] },
+              pagebreak: { mode: ["avoid-all", "css", "legacy"] },
             })
             .from(sheet)
             .save();
         } catch {
           await Swal.fire({
             title: "Erro no PDF",
-            text: "Não foi possível gerar o arquivo.",
+            text: "Não foi possível gerar o arquivo. Tente de novo ou use a opção Lista WhatsApp.",
             icon: "warning",
             ...buttons(),
           });
         } finally {
+          sheet.style.position = saved.position;
+          sheet.style.left = saved.left;
+          sheet.style.top = saved.top;
+          sheet.style.opacity = saved.opacity;
+          sheet.style.zIndex = saved.zIndex;
           Swal.close();
         }
       });
