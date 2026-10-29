@@ -552,6 +552,15 @@ input {
   margin-bottom: 1.25rem;
 }
 
+.actions-compact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1.25rem 2.5rem;
+  margin-bottom: 1rem;
+}
+
 .action-item {
   text-align: center;
 }
@@ -617,15 +626,22 @@ input {
 
 .slot-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, max-content);
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.5rem 0.65rem;
   padding: 0.75rem 1rem;
   background: var(--white);
   border: 1px solid var(--g100);
   border-radius: var(--radius);
   box-shadow: var(--sh);
   animation: fadeUp 0.4s var(--ease) backwards;
+}
+
+.slot-who {
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .slot-time {
@@ -645,16 +661,26 @@ input {
 
 .slot-own {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.35rem 0.5rem;
+  gap: 0.45rem;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
+}
+
+.slot-own .slot-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
 }
 
 .slot-own .registerLink {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.55rem;
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  padding: 0.35rem 0.65rem;
+  white-space: nowrap;
 }
 
 .slot-name {
@@ -662,7 +688,7 @@ input {
   font-weight: 600;
   color: var(--g600);
   text-align: right;
-  max-width: 140px;
+  max-width: 11rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -804,13 +830,118 @@ input {
   border-color: var(--red) !important;
 }
 
+/* Página da escala — mobile first */
+.shell-escala {
+  width: min(100%, 480px);
+  padding: 0.5rem 0 2.5rem;
+}
+
+.shell-escala .topbar {
+  margin-bottom: 0.5rem;
+}
+
+.shell-escala .logo-inline {
+  margin-bottom: 0.5rem;
+}
+
+.shell-escala .logo-inline .brand {
+  width: min(200px, 70vw);
+}
+
+.shell-escala .glass {
+  padding: 1rem 1.05rem;
+  margin-bottom: 0.75rem;
+}
+
+.shell-escala .info-grid {
+  gap: 0.65rem;
+}
+
+.shell-escala .info-item .v {
+  font-size: 0.98rem;
+}
+
+.shell-escala .slot-list {
+  gap: 0.45rem;
+}
+
+@media (max-width: 479px) {
+  .shell-escala {
+    width: calc(100% - 20px);
+  }
+
+  .shell-escala .slot-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    padding: 0.65rem 0.85rem;
+    gap: 0.45rem;
+  }
+
+  .shell-escala .slot-time {
+    font-size: 0.82rem;
+    padding-bottom: 0.15rem;
+    border-bottom: 1px solid var(--g100);
+  }
+
+  .shell-escala .slot-who {
+    justify-content: stretch;
+  }
+
+  .shell-escala .slot-own {
+    justify-content: space-between;
+    gap: 0.65rem;
+  }
+
+  .shell-escala .slot-own .slot-name {
+    text-align: left;
+    font-size: 0.9rem;
+    max-width: none;
+  }
+
+  .shell-escala .slot-name:not(.slot-own .slot-name) {
+    max-width: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .shell-escala .registerLink {
+    width: 100%;
+    text-align: center;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .shell-escala .slot-row:not(.filled) .slot-who {
+    justify-content: stretch;
+  }
+
+  .shell-escala .slot-row.filled:not(:has(.slot-own)) .slot-name {
+    display: block;
+    width: 100%;
+  }
+
+  .actions-compact {
+    gap: 1rem 2rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .action-item button {
+    width: 48px;
+    height: 48px;
+    font-size: 1.05rem;
+  }
+}
+
 @media (min-width: 480px) {
   .shell {
     width: min(480px, calc(100% - 32px));
   }
 
-  .slot-row {
+  .shell-escala .slot-row {
     padding: 0.85rem 1.15rem;
+  }
+
+  .shell-escala .slot-own {
+    max-width: 12.5rem;
   }
 }
 

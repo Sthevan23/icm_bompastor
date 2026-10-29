@@ -16,7 +16,7 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=2" />
   </head>
   <body>
     <div class="bg" aria-hidden="true">
@@ -25,7 +25,7 @@
       <div class="orb orb-c"></div>
     </div>
 
-    <div class="shell">
+    <div class="shell shell-escala">
       <header class="topbar">
         <button class="icon-btn" type="button" id="backBtn" aria-label="Voltar">
           <i class="bi bi-arrow-left"></i>
@@ -55,7 +55,7 @@
         </div>
       </section>
 
-      <div class="actions delay-2">
+      <div class="actions actions-compact delay-2">
         <div class="action-item">
           <button id="copyButton" type="button" disabled aria-label="Copiar link">
             <i class="bi bi-whatsapp"></i>
@@ -147,6 +147,7 @@
           time.innerHTML = `<i class="bi bi-clock"></i> ${interval}`;
 
           const whoWrap = document.createElement("div");
+          whoWrap.className = "slot-who";
           const name = state.currentList[interval];
 
           if (name && ICM.canEditSlot(id, interval, name)) {
