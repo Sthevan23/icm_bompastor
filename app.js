@@ -125,6 +125,19 @@
     saveDB(db);
   }
 
+  /** Remove do aparelho escalas que já não existem no servidor. */
+  function pruneLocalScales(keepIds) {
+    const keep = new Set(keepIds);
+    const db = loadDB();
+    for (const id of Object.keys(db.scales)) {
+      if (!keep.has(id)) {
+        delete db.scales[id];
+        delete db.tokens[id];
+      }
+    }
+    saveDB(db);
+  }
+
   function isOwner(id) {
     return Boolean(loadDB().tokens[id]);
   }
@@ -198,9 +211,14 @@
     }
 
     if (online) {
-      synced = await syncLocalScales();
+      if (!serverOnly()) {
+        synced = await syncLocalScales();
+      }
       const remote = await listScalesRemote();
       if (remote !== null) {
+        if (serverOnly()) {
+          pruneLocalScales(remote.map((item) => item.id));
+        }
         for (const item of remote) {
           remember(item);
         }
@@ -265,7 +283,9 @@
     }
 
     if (online) {
-      await syncOneScale(id);
+      if (!serverOnly()) {
+        await syncOneScale(id);
+      }
       const response = await fetch(apiUrl(`/api/scales/${encodeURIComponent(id)}`), {
         cache: "no-store",
       });
@@ -384,6 +404,7 @@
     setSlot,
     deleteScale,
     forget,
+    pruneLocalScales,
     isOwner,
     remember,
     brDate,
